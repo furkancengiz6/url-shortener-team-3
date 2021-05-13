@@ -1,11 +1,11 @@
 # 🧪 Team 3 — URL Shortener 🧪
 ## Команда
 
-- { Popova Victoriia } { rotkappchenn85@gmail.com } — { Rotkappchenn }
+-  Popova Victoriia   rotkappchenn85@gmail.com  —  Rotkappchenn 
 
 ## Дизайн документ
 
-{ https://cutt.ly/UzT9k3a }
+ https://cutt.ly/UzT9k3a 
 
 ### Структура приложения
 
