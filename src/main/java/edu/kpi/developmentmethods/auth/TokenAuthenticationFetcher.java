@@ -17,7 +17,8 @@ import java.util.Optional;
 public class TokenAuthenticationFetcher implements AuthenticationFetcher {
     private static final String TOKEN_PREFIX = "Bearer ";
     private static final String TOKEN_PREFIX_LOWERCASE = TOKEN_PREFIX.toLowerCase();
-    private static final Logger LOG = LoggerFactory.getLogger(BasicAuthAuthenticationFetcher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TokenAuthenticationFetcher.class);
+    
     private final Authenticator authenticator;
     private final TokenConfiguration configuration;
 
@@ -28,17 +29,19 @@ public class TokenAuthenticationFetcher implements AuthenticationFetcher {
 
     @Override
     public Publisher<Authentication> fetchAuthentication(HttpRequest<?> request) {
-        Optional<TokenCredentials> token = request.getHeaders().getAuthorization().flatMap(this::parseHeader);
+        Optional<TokenCredentials> tokenOpt = request.getHeaders().getAuthorization().flatMap(this::parseHeader);
 
-        if (token.isPresent()) {
-            Flowable<AuthenticationResponse> authenticationResponse = Flowable.fromPublisher(authenticator.authenticate(request, token.get()));
+        if (tokenOpt.isPresent()) {
+            TokenCredentials tokenCredentials = tokenOpt.get();
+            Flowable<AuthenticationResponse> authenticationResponse = Flowable.fromPublisher(authenticator.authenticate(request, tokenCredentials));
+
             return authenticationResponse.switchMap(response -> {
                 if (response.isAuthenticated()) {
                     UserDetails userDetails = response.getUserDetails().get();
                     return Flowable.just(new AuthenticationUserDetailsAdapter(userDetails, configuration.getRolesName(), configuration.getNameKey()));
                 } else {
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("Could not authenticate");
+                        LOG.debug("Authentication failed");
                     }
                     return Flowable.empty();
                 }
@@ -53,11 +56,7 @@ public class TokenAuthenticationFetcher implements AuthenticationFetcher {
             return Optional.empty();
         }
 
-        TokenCredentials credentials = null;
-        var token = header.substring(TOKEN_PREFIX.length()).trim();
-        if (!token.isBlank()) {
-            credentials = new TokenCredentials(token);
-        }
-        return Optional.ofNullable(credentials);
+        String token = header.substring(TOKEN_PREFIX.length()).trim();
+        return token.isBlank() ? Optional.empty() : Optional.of(new TokenCredentials(token));
     }
 }
