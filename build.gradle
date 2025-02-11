@@ -48,7 +48,7 @@ dependencies {
     implementation("io.micronaut:micronaut-http-client")
     implementation("io.micronaut:micronaut-runtime")
     implementation("io.micronaut:micronaut-validation")
-
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.0")
 
     // We will use security framework provided by micronaut
     annotationProcessor("io.micronaut.security:micronaut-security-annotations")
