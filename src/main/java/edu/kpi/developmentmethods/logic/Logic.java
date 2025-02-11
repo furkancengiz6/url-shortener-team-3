@@ -1,57 +1,81 @@
 package edu.kpi.developmentmethods.logic;
 
 import edu.kpi.developmentmethods.dto.Example;
+import edu.kpi.developmentmethods.dto.UrlEntry;
 import edu.kpi.developmentmethods.storage.Storage;
 
+import java.util.Random;
 
 /**
  * Класс, который инкапсулирует в себя бизнес-логику приложения
+ * (URL Shortener mantığını ekledik)
  */
 public class Logic {
     private final Storage storage;
+    private static final String BASE_URL = "http://short.ly/";
+    private static final String CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int SHORT_URL_LENGTH = 6;
+    private final Random random = new Random();
 
     public Logic(Storage storage) {
-        // Обратите внимание, мы не создаём хранилище внутри класса, а получаем его извне.
-        // Такой подход используется для построения более гибкой архитектуры приложения,
-        // и называется внедрением зависимостей (dependency injection)
         this.storage = storage;
     }
 
     /**
-     * Получаем элемент из хранилища по ключу
-     *
-     * @param key ключ
-     * @return значение, которое храилось по указаному ключу
+     * URL'yi kısaltır ve saklar
+     * 
+     * @param originalUrl Kullanıcının kaydetmek istediği orijinal URL
+     * @return Kısaltılmış URL (Örn: http://short.ly/abc123)
      */
-    public Example getExample(String key) {
-        return storage.get(key);
+    public synchronized String shortenUrl(String originalUrl) {
+        String shortKey = generateShortKey();
+        
+        // Aynı kısa URL'nin tekrar üretilmemesi için kontrol
+        while (storage.get(shortKey) != null) {
+            shortKey = generateShortKey();
+        }
+
+        UrlEntry urlEntry = new UrlEntry(originalUrl, shortKey);
+        storage.put(shortKey, urlEntry);
+        
+        return BASE_URL + shortKey;
     }
 
+    /**
+     * Kısaltılmış URL'nin orijinal halini getirir
+     * 
+     * @param shortKey Kısaltılmış URL'nin son kısmı (Örn: "abc123")
+     * @return Orijinal uzun URL, eğer bulunamazsa null döner
+     */
+    public String getOriginalUrl(String shortKey) {
+        UrlEntry entry = storage.get(shortKey);
+        return entry != null ? entry.getOriginalUrl() : null;
+    }
 
     /**
-     * Сохраняет значение по ключу, если нет других значений, сохранённых с этим ключом
-     *
-     * @param key ключ по которому значение должно быть сохранено
-     * @param value значение
-     * @return true если значение было сохранено, в противном случае - false
+     * Kısaltılmış URL'yi siler
+     * 
+     * @param shortKey Silinecek URL'nin kısa anahtarı
+     * @return true eğer başarılı bir şekilde silindiyse, false aksi takdirde
      */
-    public synchronized boolean putExampleIfNotExists(String key, Example value) {
-        var example = storage.get(key);
-        if (example == null) {
-            storage.put(key, value);
+    public synchronized boolean deleteShortUrl(String shortKey) {
+        if (storage.get(shortKey) != null) {
+            storage.del(shortKey);
             return true;
         }
         return false;
     }
 
-
     /**
-     * Удаляет элемент по ключу. В случае, если по даному ключу нет сохранённого значения,
-     * этот метод ничего не делает
-     *
-     * @param key ключ
+     * Rastgele 6 karakter uzunluğunda bir kısa URL anahtarı oluşturur
+     * 
+     * @return Kısa URL için rastgele anahtar
      */
-    public synchronized void deleteExample(String key) {
-        storage.del(key);
+    private String generateShortKey() {
+        StringBuilder key = new StringBuilder(SHORT_URL_LENGTH);
+        for (int i = 0; i < SHORT_URL_LENGTH; i++) {
+            key.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
+        }
+        return key.toString();
     }
 }
